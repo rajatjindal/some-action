@@ -10,13 +10,13 @@ async function run(): Promise<void> {
       throw `this action currently support deploying apps on PR only`
     }
 
-    core.info("read spin.toml")
+    core.info("reading spin.toml")
     const spinConfig = fermyon.getSpinConfig()
     const realAppName = spinConfig.name
 
     const currentPRNumber = github.context.payload.pull_request?.number
     const previewAppName = `${spinConfig.name}-pr-${currentPRNumber}`
-    core.info(`will be deploying new app with name ${previewAppName}`)
+    core.info(`will be deploying preview with name ${previewAppName}`)
 
     core.info("creating Github client")
     const ghclient = new GithubClient(github.context.repo.owner, github.context.repo.repo, core.getInput("github_token"))

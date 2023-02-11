@@ -167,7 +167,6 @@ export const getSpinConfig = function (): SpinConfig {
 }
 
 export const setupSpin = async function (): Promise<void> {
-    core.info(`setting up spin ${SPIN_VERSION}`)
     const downloadUrl = `https://github.com/fermyon/spin/releases/download/${SPIN_VERSION}/spin-${SPIN_VERSION}-linux-amd64.tar.gz`
     await downloader
         .getConfig(`spin`, downloadUrl, `spin`)
@@ -178,8 +177,6 @@ export const setupSpin = async function (): Promise<void> {
     if (plugins.length > 0) {
         await exec.exec('spin', ['plugin', 'update'])
         plugins.every(async function (plugin) {
-            core.info(`setting up spin plugin '${plugin}'`);
-            //TODO: use Promise.All
             await exec.exec('spin', ['plugin', 'install', plugin, '--yes'])
         })
     }
@@ -199,20 +196,15 @@ export const extractMetadataFromLogs = function (appName: string, logs: string):
     let base = '';
     for (let i = 0; i < lines.length; i++) {
         if (!routeStart && lines[i].trim() != 'Available Routes:') {
-            core.info("found available routes")
             continue
         }
 
         if (!routeStart) {
-            core.info("starting routes")
             routeStart = true
             continue
         }
 
-        core.info(`line is ${lines[i]}`)
-
         const matches = lines[i].trim().match(routeMatcher)
-        core.info(`matches is ${matches}`)
         if (matches && matches.length >= 2) {
             const route = new Route(matches[1], matches[2], matches[3].trim() === '(wildcard)')
             routes.push(route)

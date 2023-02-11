@@ -23641,7 +23641,6 @@ const getSpinConfig = function () {
 exports.getSpinConfig = getSpinConfig;
 const setupSpin = function () {
     return __awaiter(this, void 0, void 0, function* () {
-        core.info(`setting up spin ${exports.SPIN_VERSION}`);
         const downloadUrl = `https://github.com/fermyon/spin/releases/download/${exports.SPIN_VERSION}/spin-${exports.SPIN_VERSION}-linux-amd64.tar.gz`;
         yield downloader
             .getConfig(`spin`, downloadUrl, `spin`)
@@ -23652,8 +23651,6 @@ const setupSpin = function () {
             yield exec.exec('spin', ['plugin', 'update']);
             plugins.every(function (plugin) {
                 return __awaiter(this, void 0, void 0, function* () {
-                    core.info(`setting up spin plugin '${plugin}'`);
-                    //TODO: use Promise.All
                     yield exec.exec('spin', ['plugin', 'install', plugin, '--yes']);
                 });
             });
@@ -23674,17 +23671,13 @@ const extractMetadataFromLogs = function (appName, logs) {
     let base = '';
     for (let i = 0; i < lines.length; i++) {
         if (!routeStart && lines[i].trim() != 'Available Routes:') {
-            core.info("found available routes");
             continue;
         }
         if (!routeStart) {
-            core.info("starting routes");
             routeStart = true;
             continue;
         }
-        core.info(`line is ${lines[i]}`);
         const matches = lines[i].trim().match(routeMatcher);
-        core.info(`matches is ${matches}`);
         if (matches && matches.length >= 2) {
             const route = new Route(matches[1], matches[2], matches[3].trim() === '(wildcard)');
             routes.push(route);
@@ -23791,12 +23784,12 @@ function run() {
             if (!github.context.payload.pull_request) {
                 throw `this action currently support deploying apps on PR only`;
             }
-            core.info("read spin.toml");
+            core.info("reading spin.toml");
             const spinConfig = fermyon.getSpinConfig();
             const realAppName = spinConfig.name;
             const currentPRNumber = (_a = github.context.payload.pull_request) === null || _a === void 0 ? void 0 : _a.number;
             const previewAppName = `${spinConfig.name}-pr-${currentPRNumber}`;
-            core.info(`will be deploying new app with name ${previewAppName}`);
+            core.info(`will be deploying preview with name ${previewAppName}`);
             core.info("creating Github client");
             const ghclient = new github_1.GithubClient(github.context.repo.owner, github.context.repo.repo, core.getInput("github_token"));
             core.info("setting up spin");
