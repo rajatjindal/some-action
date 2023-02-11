@@ -7,7 +7,7 @@ inputs:
     description: 'to update comment on pr'
   fermyon_token_file_name:
     required: false
-    description: 'file that contains fermyon token details, defaults to ${process.env.GITHUB_WORKSPACE}/config.json'
+    description: 'file that contains fermyon token details, defaults to config.json (in ${GITHUB_WORKSPACE} dir)'
 runs:
   using: 'node16'
   main: 'dist/index.js'
