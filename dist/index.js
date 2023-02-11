@@ -51160,6 +51160,7 @@ function run() {
                 yield fermyonClient.deleteAppByName(`${spinConfig.name}-pr-${result.data.items[0].number}`);
             }
             // deploy new app
+            yield io.mkdirP("/home/runner/.config/fermyon/");
             yield io.cp(`${process.env.GITHUB_WORKSPACE}/developer-docs-preview.json`, "/home/runner/.config/fermyon/config.json");
             yield fermyonClient.deploy(`${spinConfig.name}-pr-${(_a = github.context.payload.pull_request) === null || _a === void 0 ? void 0 : _a.number}`);
             // update comment
