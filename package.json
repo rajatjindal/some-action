@@ -9,7 +9,7 @@
     "format": "prettier --write '**/*.ts'",
     "format-check": "prettier --check '**/*.ts'",
     "lint": "eslint src/**/*.ts",
-    "package": "ncc build src/preview.ts",
+    "package": "ncc build src/index.ts",
     "test": "jest",
     "all": "npm run build && npm run format && npm run package"
   },

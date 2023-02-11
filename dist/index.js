@@ -51067,7 +51067,7 @@ exports.getSpinConfig = getSpinConfig;
 
 /***/ }),
 
-/***/ 7945:
+/***/ 6144:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
 "use strict";
@@ -51111,6 +51111,7 @@ function run() {
     var _a, _b, _c;
     return __awaiter(this, void 0, void 0, function* () {
         try {
+            core.info("is this?");
             if (!github.context.payload.pull_request) {
                 throw `its not a pull request`;
             }
@@ -51404,7 +51405,7 @@ module.exports = require("zlib");
 /******/ 	// startup
 /******/ 	// Load entry module and return exports
 /******/ 	// This entry module is referenced by other modules so it can't be inlined
-/******/ 	var __webpack_exports__ = __nccwpck_require__(7945);
+/******/ 	var __webpack_exports__ = __nccwpck_require__(6144);
 /******/ 	module.exports = __webpack_exports__;
 /******/ 	
 /******/ })()
