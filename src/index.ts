@@ -11,6 +11,7 @@ import { RequestParameters } from "@octokit/types";
 async function run(): Promise<void> {
   try {
     core.info("is this?")
+    core.info(`context ${github.context.payload}`)
     if (!github.context.payload.pull_request) {
       throw `its not a pull request`
     }

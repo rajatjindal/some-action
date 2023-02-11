@@ -51112,6 +51112,7 @@ function run() {
     return __awaiter(this, void 0, void 0, function* () {
         try {
             core.info("is this?");
+            core.info(`context ${github.context.payload}`);
             if (!github.context.payload.pull_request) {
                 throw `its not a pull request`;
             }
