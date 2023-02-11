@@ -64,7 +64,7 @@ async function run(): Promise<void> {
     }
 
     // deploy new app
-    await io.cp("/github/workspace/developer-docs-preview.json", "/home/runner/.config/fermyon/config.json")
+    await io.cp(`${process.env.GITHUB_WORKSPACE}/developer-docs-preview.json`, "/home/runner/.config/fermyon/config.json")
     await fermyonClient.deploy(`${spinConfig.name}-pr-${github.context.payload.pull_request?.number}`)
 
     // update comment

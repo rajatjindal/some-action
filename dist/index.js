@@ -51160,7 +51160,7 @@ function run() {
                 yield fermyonClient.deleteAppByName(`${spinConfig.name}-pr-${result.data.items[0].number}`);
             }
             // deploy new app
-            yield io.cp("/github/workspace/developer-docs-preview.json", "/home/runner/.config/fermyon/config.json");
+            yield io.cp(`${process.env.GITHUB_WORKSPACE}/developer-docs-preview.json`, "/home/runner/.config/fermyon/config.json");
             yield fermyonClient.deploy(`${spinConfig.name}-pr-${(_a = github.context.payload.pull_request) === null || _a === void 0 ? void 0 : _a.number}`);
             // update comment
             ghclient.rest.issues.createComment({ owner: github.context.repo.owner, repo: github.context.repo.repo, issue_number: (_b = github.context.payload.pull_request) === null || _b === void 0 ? void 0 : _b.number, body: "Your preview is available at" });
