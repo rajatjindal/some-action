@@ -4,6 +4,7 @@ import * as exec from '@actions/exec'
 import * as io from '@actions/io'
 import * as fs from 'fs-extra'
 import * as toml from 'toml'
+import * as downloader from './downloader'
 
 export const PROD_CLOUD_BASE = "https://cloud.fermyon.com"
 
@@ -104,26 +105,29 @@ export class FermyonClient {
         this.deleteAppById(appId)
     }
 
-    async deploy(appName: string): Promise<Metadata> {
-        await io.cp("spin.toml", `${appName}-spin.toml`)
+    async deployAs(realAppName: string, previewAppName: string): Promise<Metadata> {
+        const previewTomlFile = `${previewAppName}-spin.toml`
+        await io.cp("spin.toml", previewTomlFile)
 
-        fs.readFile(`${appName}-spin.toml`, 'utf8', function (err, data) {
+        fs.readFile(previewTomlFile, 'utf8', function (err, data) {
             if (err) {
                 return console.log(err);
             }
-            var result = data.replace(/fermyon-developer/g, appName);
 
-            fs.writeFile(`${appName}-spin.toml`, result, 'utf8', function (err) {
+            const re = new RegExp(`name = "${realAppName}`, "g")
+            var result = data.replace(re, `name = ${previewAppName}`);
+
+            fs.writeFile(previewTomlFile, result, 'utf8', function (err) {
                 if (err) return console.log(err);
             });
         });
 
-        const result = await exec.getExecOutput("spin", ["deploy", "--file", `${appName}-spin.toml`])
+        const result = await exec.getExecOutput("spin", ["deploy", "--file", previewTomlFile])
         if (result.exitCode != 0) {
             throw `deploy failed with [status_code: ${result.exitCode}] [stdout: ${result.stdout}] [stderr: ${result.stderr}] `
         }
 
-        return extractMetadataFromLogs(appName, result.stdout)
+        return extractMetadataFromLogs(previewAppName, result.stdout)
     }
 }
 
@@ -159,6 +163,25 @@ export const getSpinConfig = function (): SpinConfig {
     return config
 }
 
+export const setupSpin = async function (): Promise<void> {
+    const spinVersion = 'v0.8.0'
+    core.info(`setting up spin ${spinVersion}`)
+    const downloadUrl = `https://github.com/fermyon/spin/releases/download/${spinVersion}/spin-${spinVersion}-linux-amd64.tar.gz`
+    await downloader
+        .getConfig(`spin`, downloadUrl, `spin`)
+        .download()
+
+    //setup plugins if needed
+    const plugins = core.getInput('plugins') !== '' ? core.getInput('plugins').split(',') : [];
+    if (plugins.length > 0) {
+        await exec.exec('spin', ['plugin', 'update'])
+        plugins.every(async function (plugin) {
+            core.info(`setting up spin plugin '${plugin}'`);
+            //TODO: use Promise.All
+            await exec.exec('spin', ['plugin', 'install', plugin, '--yes'])
+        })
+    }
+}
 export const extractMetadataFromLogs = function (appName: string, logs: string): Metadata {
     let version = '';
     const m = logs.match(`Uploading ${appName} version (.*)\.\.\.`)

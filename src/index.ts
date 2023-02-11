@@ -1,7 +1,7 @@
 import * as core from '@actions/core'
 import * as exec from '@actions/exec'
 import * as downloader from './downloader'
-import { initFermyonClient, getSpinConfig, extractMetadataFromLogs } from './fermyon'
+import { initFermyonClient, getSpinConfig, setupSpin } from './fermyon'
 import * as sys from './system'
 import * as github from '@actions/github';
 import * as octokit from 'octokit'
@@ -9,73 +9,63 @@ import * as octocore from '@octokit/core'
 import { RequestParameters } from "@octokit/types";
 import * as io from '@actions/io'
 import * as path from 'path'
+import { GithubClient } from './github'
 
 async function run(): Promise<void> {
   try {
-    // core.info("is this?")
-    // const m = extractMetadataFromLogs("fermyon-developer", "")
-    // core.info(`metadata is ${JSON.stringify(m)}`)
-
-    // core.info(`context ${JSON.stringify(github.context.payload)}`)
     if (!github.context.payload.pull_request) {
-      throw `its not a pull request`
+      throw `this action currently support deploying apps on PR only`
     }
 
-    //setup spin
-    const spinVersion = 'v0.8.0'
-    core.info(`setting up spin ${spinVersion}`)
-    const downloadUrl = `https://github.com/fermyon/spin/releases/download/${spinVersion}/spin-${spinVersion}-linux-amd64.tar.gz`
-    await downloader
-      .getConfig(`spin`, downloadUrl, `spin`)
-      .download()
-
-    //setup plugins if needed
-    const plugins = core.getInput('plugins') !== '' ? core.getInput('plugins').split(',') : [];
-    if (plugins.length > 0) {
-      await exec.exec('spin', ['plugin', 'update'])
-      plugins.every(async function (plugin) {
-        core.info(`setting up spin plugin '${plugin}'`);
-        //TODO: use Promise.All
-        await exec.exec('spin', ['plugin', 'install', plugin, '--yes'])
-      })
-    }
-
+    core.info("read spin.toml")
     const spinConfig = getSpinConfig()
-    const ghclient = new octokit.Octokit()
+    const realAppName = spinConfig.name
+
+    const currentPRNumber = github.context.payload.pull_request?.number
+    const previewAppName = `${spinConfig.name}-pr-${currentPRNumber}`
+    core.info(`will be deploying new app with name ${previewAppName}`)
+
+    core.info("creating Github client")
+    const ghclient = new GithubClient(github.context.repo.owner, github.context.repo.repo, "")
 
     core.info("creating Fermyon client")
     const fermyonClient = initFermyonClient()
-    // check if token file found, if so read it into a struct
-    // get number of apps
-    core.info("checking if we have room for this preview")
+
+    core.info("setting up spin")
+    await setupSpin()
+
+    core.info("configuring token for spin auth")
+    const inputTokenFile = core.getInput('fermyon_token_file');
+    const defaultTokenFile = `${process.env.GITHUB_WORKSPACE}/config.json`
+    const tokenFile = inputTokenFile && inputTokenFile !== '' ? inputTokenFile : defaultTokenFile
+    await io.mkdirP("/home/runner/.config/fermyon/")
+    await io.cp(tokenFile, "/home/runner/.config/fermyon/config.json")
+
+    core.info("checking if have room to deploy this preview")
     const apps = await fermyonClient.getAllApps()
-    const previewExists = apps.find(item => item.name === spinConfig.name)
-    // if > 5, and overwrite enabled, delete the oldest
-    // check if our app is already deployed as preview
-    if (!previewExists && apps.length >= 5) {
+    const thisPreviewExists = apps.find(item => item.name === previewAppName)
+
+    if (!thisPreviewExists && apps.length >= 5) {
       if (core.getInput("overwrite_old_previews") !== 'true') {
         throw `max apps allowed limit exceeded. max_allowed: 5, current_apps_count: ${apps.length}. Use option 'overwrite_old_previews=true' to overwrite old previews`
       }
 
-      //find oldest pr
-      const q = `org:${github.context.repo.owner} repo:${github.context.repo.repo} is:open is:pr`;
-      const result = await ghclient.rest.search.issuesAndPullRequests({ q, sort: 'updated', order: "asc" })
-      if (result.data.items.length === 0) {
-        throw `app limits reached on cloud but no old pr found to remove`
-      }
+      core.info("apps limit reached. finding oldest pr to overwrite")
+      const oldestDeployedPRNumber = await ghclient.findOldestPRNumber()
+      const oldestDeployedPRPreviewName = `${spinConfig.name}-pr-${oldestDeployedPRNumber}`
 
-      await fermyonClient.deleteAppByName(`${spinConfig.name}-pr-${result.data.items[0].number}`)
+      core.info(`deleting app by name ${oldestDeployedPRPreviewName}`)
+      await fermyonClient.deleteAppByName(oldestDeployedPRPreviewName)
     }
 
-    // deploy new app
-    await io.mkdirP("/home/runner/.config/fermyon/")
-    await io.cp(`${process.env.GITHUB_WORKSPACE}/developer-docs-preview.json`, "/home/runner/.config/fermyon/config.json")
-    const metadata = await fermyonClient.deploy(`${spinConfig.name}-pr-${github.context.payload.pull_request?.number}`)
+    core.info(`deploying preview as ${previewAppName}`)
+    const metadata = await fermyonClient.deployAs(realAppName, previewAppName)
     core.info(`metadata is ${JSON.stringify(metadata)}`)
-    // update comment
-    // ghclient.rest.issues.createComment({ owner: github.context.repo.owner, repo: github.context.repo.repo, issue_number: github.context.payload.pull_request?.number, body: "Your preview is available at" })
-    // // add label
-    // ghclient.rest.issues.addLabels({ owner: github.context.repo.owner, repo: github.context.repo.repo, issue_number: github.context.payload.pull_request?.number, labels: ["fermyon-preview-deployed"] })
+
+    const comment = `Your preview is available at ${metadata.base}`
+    await ghclient.updateComment(currentPRNumber, comment)
+
+    core.info(`preview deployment successful and available at ${metadata.base}`)
   } catch (error) {
     if (error instanceof Error) core.setFailed(error.message)
   }
