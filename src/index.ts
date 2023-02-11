@@ -13,7 +13,7 @@ import * as path from 'path'
 async function run(): Promise<void> {
   try {
     core.info("is this?")
-    core.info(`context ${JSON.stringify(github.context.payload)}`)
+    // core.info(`context ${JSON.stringify(github.context.payload)}`)
     if (!github.context.payload.pull_request) {
       throw `its not a pull request`
     }
@@ -67,13 +67,12 @@ async function run(): Promise<void> {
     // deploy new app
     await io.mkdirP("/home/runner/.config/fermyon/")
     await io.cp(`${process.env.GITHUB_WORKSPACE}/developer-docs-preview.json`, "/home/runner/.config/fermyon/config.json")
-    await fermyonClient.deploy(`${spinConfig.name}-pr-${github.context.payload.pull_request?.number}`)
-
+    const metadata = await fermyonClient.deploy(`${spinConfig.name}-pr-${github.context.payload.pull_request?.number}`)
+    core.info(`metadata is ${JSON.stringify(metadata)}`)
     // update comment
-    ghclient.rest.issues.createComment({ owner: github.context.repo.owner, repo: github.context.repo.repo, issue_number: github.context.payload.pull_request?.number, body: "Your preview is available at" })
-
-    // add label
-    ghclient.rest.issues.addLabels({ owner: github.context.repo.owner, repo: github.context.repo.repo, issue_number: github.context.payload.pull_request?.number, labels: ["fermyon-preview-deployed"] })
+    // ghclient.rest.issues.createComment({ owner: github.context.repo.owner, repo: github.context.repo.repo, issue_number: github.context.payload.pull_request?.number, body: "Your preview is available at" })
+    // // add label
+    // ghclient.rest.issues.addLabels({ owner: github.context.repo.owner, repo: github.context.repo.repo, issue_number: github.context.payload.pull_request?.number, labels: ["fermyon-preview-deployed"] })
   } catch (error) {
     if (error instanceof Error) core.setFailed(error.message)
   }

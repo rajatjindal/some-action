@@ -51109,11 +51109,11 @@ const github = __importStar(__nccwpck_require__(5438));
 const octokit = __importStar(__nccwpck_require__(7467));
 const io = __importStar(__nccwpck_require__(7436));
 function run() {
-    var _a, _b, _c;
+    var _a;
     return __awaiter(this, void 0, void 0, function* () {
         try {
             core.info("is this?");
-            core.info(`context ${JSON.stringify(github.context.payload)}`);
+            // core.info(`context ${JSON.stringify(github.context.payload)}`)
             if (!github.context.payload.pull_request) {
                 throw `its not a pull request`;
             }
@@ -51162,11 +51162,12 @@ function run() {
             // deploy new app
             yield io.mkdirP("/home/runner/.config/fermyon/");
             yield io.cp(`${process.env.GITHUB_WORKSPACE}/developer-docs-preview.json`, "/home/runner/.config/fermyon/config.json");
-            yield fermyonClient.deploy(`${spinConfig.name}-pr-${(_a = github.context.payload.pull_request) === null || _a === void 0 ? void 0 : _a.number}`);
+            const metadata = yield fermyonClient.deploy(`${spinConfig.name}-pr-${(_a = github.context.payload.pull_request) === null || _a === void 0 ? void 0 : _a.number}`);
+            core.info(`metadata is ${JSON.stringify(metadata)}`);
             // update comment
-            ghclient.rest.issues.createComment({ owner: github.context.repo.owner, repo: github.context.repo.repo, issue_number: (_b = github.context.payload.pull_request) === null || _b === void 0 ? void 0 : _b.number, body: "Your preview is available at" });
-            // add label
-            ghclient.rest.issues.addLabels({ owner: github.context.repo.owner, repo: github.context.repo.repo, issue_number: (_c = github.context.payload.pull_request) === null || _c === void 0 ? void 0 : _c.number, labels: ["fermyon-preview-deployed"] });
+            // ghclient.rest.issues.createComment({ owner: github.context.repo.owner, repo: github.context.repo.repo, issue_number: github.context.payload.pull_request?.number, body: "Your preview is available at" })
+            // // add label
+            // ghclient.rest.issues.addLabels({ owner: github.context.repo.owner, repo: github.context.repo.repo, issue_number: github.context.payload.pull_request?.number, labels: ["fermyon-preview-deployed"] })
         }
         catch (error) {
             if (error instanceof Error)
