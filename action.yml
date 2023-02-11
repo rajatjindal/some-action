@@ -5,7 +5,7 @@ inputs:
   github_token:
     required: true
     description: 'to update comment on pr'
-  fermyon_token_file:
+  fermyon_token_file_name:
     required: false
     description: 'file that contains fermyon token details, defaults to ${process.env.GITHUB_WORKSPACE}/config.json'
 runs:
