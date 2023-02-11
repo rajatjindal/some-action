@@ -23598,8 +23598,8 @@ class FermyonClient {
                 if (err) {
                     return console.log(err);
                 }
-                const re = new RegExp(`name = "${realAppName}`, "g");
-                var result = data.replace(re, `name = ${previewAppName}`);
+                const re = new RegExp(`name = "${realAppName}"`, "g");
+                var result = data.replace(re, `name = "${previewAppName}"`);
                 fs.writeFile(previewTomlFile, result, 'utf8', function (err) {
                     if (err)
                         return console.log(err);
