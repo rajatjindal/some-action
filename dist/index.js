@@ -23497,7 +23497,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.extractMetadataFromLogs = exports.setupSpin = exports.getSpinConfig = exports.SpinConfig = exports.getToken = exports.TokenInfo = exports.FermyonClient = exports.Metadata = exports.Route = exports.App = exports.GetAppsResp = exports.initFermyonClient = exports.PROD_CLOUD_BASE = void 0;
+exports.extractMetadataFromLogs = exports.setupSpin = exports.getSpinConfig = exports.SpinConfig = exports.getToken = exports.TokenInfo = exports.FermyonClient = exports.Metadata = exports.Route = exports.App = exports.GetAppsResp = exports.initClient = exports.SPIN_VERSION = exports.DEFAULT_TOKEN_FILE = exports.DEFAULT_TOKEN_DIR = exports.PROD_CLOUD_BASE = void 0;
 const core = __importStar(__nccwpck_require__(2186));
 const httpm = __importStar(__nccwpck_require__(6255));
 const exec = __importStar(__nccwpck_require__(1514));
@@ -23505,11 +23505,15 @@ const io = __importStar(__nccwpck_require__(7436));
 const fs = __importStar(__nccwpck_require__(5630));
 const toml = __importStar(__nccwpck_require__(4920));
 const downloader = __importStar(__nccwpck_require__(9099));
+const path = __importStar(__nccwpck_require__(5622));
 exports.PROD_CLOUD_BASE = "https://cloud.fermyon.com";
-function initFermyonClient() {
-    return new FermyonClient(exports.PROD_CLOUD_BASE);
+exports.DEFAULT_TOKEN_DIR = "/home/runner/.config/fermyon";
+exports.DEFAULT_TOKEN_FILE = path.join(exports.DEFAULT_TOKEN_DIR, "config.json");
+exports.SPIN_VERSION = 'v0.8.0';
+function initClient() {
+    return new FermyonClient(exports.PROD_CLOUD_BASE, exports.DEFAULT_TOKEN_FILE);
 }
-exports.initFermyonClient = initFermyonClient;
+exports.initClient = initClient;
 class GetAppsResp {
     constructor(items) {
         this.items = items;
@@ -23542,9 +23546,9 @@ class Metadata {
 }
 exports.Metadata = Metadata;
 class FermyonClient {
-    constructor(base) {
+    constructor(base, tokenFile) {
         this.base = base;
-        this.token = (0, exports.getToken)();
+        this.token = (0, exports.getToken)(tokenFile);
         core.info(`token is ${this.token}`);
         this._httpclient = new httpm.HttpClient("fermyon-preview-deployment", [], {
             headers: {
@@ -23616,9 +23620,8 @@ class TokenInfo {
     }
 }
 exports.TokenInfo = TokenInfo;
-const getToken = function () {
-    let token = '';
-    const data = fs.readFileSync("developer-docs-preview.json", "utf8");
+const getToken = function (tokenFile) {
+    const data = fs.readFileSync(tokenFile, "utf8");
     const tokenInfo = JSON.parse(data);
     return tokenInfo.token;
 };
@@ -23638,9 +23641,8 @@ const getSpinConfig = function () {
 exports.getSpinConfig = getSpinConfig;
 const setupSpin = function () {
     return __awaiter(this, void 0, void 0, function* () {
-        const spinVersion = 'v0.8.0';
-        core.info(`setting up spin ${spinVersion}`);
-        const downloadUrl = `https://github.com/fermyon/spin/releases/download/${spinVersion}/spin-${spinVersion}-linux-amd64.tar.gz`;
+        core.info(`setting up spin ${exports.SPIN_VERSION}`);
+        const downloadUrl = `https://github.com/fermyon/spin/releases/download/${exports.SPIN_VERSION}/spin-${exports.SPIN_VERSION}-linux-amd64.tar.gz`;
         yield downloader
             .getConfig(`spin`, downloadUrl, `spin`)
             .download();
@@ -23719,8 +23721,7 @@ class GithubClient {
     constructor(owner, repo, token) {
         this.owner = owner;
         this.repo = repo;
-        this.token = token;
-        this._ghclient = new rest_1.Octokit({ auth: `personal-access-token123` });
+        this._ghclient = new rest_1.Octokit({ auth: token });
     }
     findOldestPRNumber() {
         return __awaiter(this, void 0, void 0, function* () {
@@ -23779,7 +23780,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 const core = __importStar(__nccwpck_require__(2186));
-const fermyon_1 = __nccwpck_require__(5873);
+const fermyon = __importStar(__nccwpck_require__(5873));
 const github = __importStar(__nccwpck_require__(5438));
 const io = __importStar(__nccwpck_require__(7436));
 const github_1 = __nccwpck_require__(978);
@@ -23791,23 +23792,23 @@ function run() {
                 throw `this action currently support deploying apps on PR only`;
             }
             core.info("read spin.toml");
-            const spinConfig = (0, fermyon_1.getSpinConfig)();
+            const spinConfig = fermyon.getSpinConfig();
             const realAppName = spinConfig.name;
             const currentPRNumber = (_a = github.context.payload.pull_request) === null || _a === void 0 ? void 0 : _a.number;
             const previewAppName = `${spinConfig.name}-pr-${currentPRNumber}`;
             core.info(`will be deploying new app with name ${previewAppName}`);
             core.info("creating Github client");
-            const ghclient = new github_1.GithubClient(github.context.repo.owner, github.context.repo.repo, "");
-            core.info("creating Fermyon client");
-            const fermyonClient = (0, fermyon_1.initFermyonClient)();
+            const ghclient = new github_1.GithubClient(github.context.repo.owner, github.context.repo.repo, core.getInput("github_token"));
             core.info("setting up spin");
-            yield (0, fermyon_1.setupSpin)();
+            yield fermyon.setupSpin();
             core.info("configuring token for spin auth");
             const inputTokenFile = core.getInput('fermyon_token_file');
-            const defaultTokenFile = `${process.env.GITHUB_WORKSPACE}/config.json`;
-            const tokenFile = inputTokenFile && inputTokenFile !== '' ? inputTokenFile : defaultTokenFile;
-            yield io.mkdirP("/home/runner/.config/fermyon/");
-            yield io.cp(tokenFile, "/home/runner/.config/fermyon/config.json");
+            const defaultInputTokenFile = `${process.env.GITHUB_WORKSPACE}/config.json`;
+            const tokenFile = inputTokenFile && inputTokenFile !== '' ? inputTokenFile : defaultInputTokenFile;
+            yield io.mkdirP(fermyon.DEFAULT_TOKEN_DIR);
+            yield io.cp(tokenFile, fermyon.DEFAULT_TOKEN_FILE);
+            core.info("creating Fermyon client");
+            const fermyonClient = fermyon.initClient();
             core.info("checking if have room to deploy this preview");
             const apps = yield fermyonClient.getAllApps();
             const thisPreviewExists = apps.find(item => item.name === previewAppName);

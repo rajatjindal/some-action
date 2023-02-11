@@ -5,11 +5,15 @@ import * as io from '@actions/io'
 import * as fs from 'fs-extra'
 import * as toml from 'toml'
 import * as downloader from './downloader'
+import * as path from 'path'
 
 export const PROD_CLOUD_BASE = "https://cloud.fermyon.com"
+export const DEFAULT_TOKEN_DIR = "/home/runner/.config/fermyon"
+export const DEFAULT_TOKEN_FILE = path.join(DEFAULT_TOKEN_DIR, "config.json")
+export const SPIN_VERSION = 'v0.8.0'
 
-export function initFermyonClient(): FermyonClient {
-    return new FermyonClient(PROD_CLOUD_BASE)
+export function initClient(): FermyonClient {
+    return new FermyonClient(PROD_CLOUD_BASE, DEFAULT_TOKEN_FILE)
 }
 
 export class GetAppsResp {
@@ -62,9 +66,9 @@ export class FermyonClient {
     token: string
     _httpclient: httpm.HttpClient
 
-    constructor(base: string) {
+    constructor(base: string, tokenFile: string) {
         this.base = base
-        this.token = getToken()
+        this.token = getToken(tokenFile)
         core.info(`token is ${this.token}`)
         this._httpclient = new httpm.HttpClient("fermyon-preview-deployment", [], {
             headers: {
@@ -139,9 +143,8 @@ export class TokenInfo {
     }
 }
 
-export const getToken = function (): string {
-    let token: string = '';
-    const data = fs.readFileSync("developer-docs-preview.json", "utf8");
+export const getToken = function (tokenFile: string): string {
+    const data = fs.readFileSync(tokenFile, "utf8");
 
     const tokenInfo: TokenInfo = JSON.parse(data);
     return tokenInfo.token;
@@ -164,9 +167,8 @@ export const getSpinConfig = function (): SpinConfig {
 }
 
 export const setupSpin = async function (): Promise<void> {
-    const spinVersion = 'v0.8.0'
-    core.info(`setting up spin ${spinVersion}`)
-    const downloadUrl = `https://github.com/fermyon/spin/releases/download/${spinVersion}/spin-${spinVersion}-linux-amd64.tar.gz`
+    core.info(`setting up spin ${SPIN_VERSION}`)
+    const downloadUrl = `https://github.com/fermyon/spin/releases/download/${SPIN_VERSION}/spin-${SPIN_VERSION}-linux-amd64.tar.gz`
     await downloader
         .getConfig(`spin`, downloadUrl, `spin`)
         .download()
@@ -182,6 +184,7 @@ export const setupSpin = async function (): Promise<void> {
         })
     }
 }
+
 export const extractMetadataFromLogs = function (appName: string, logs: string): Metadata {
     let version = '';
     const m = logs.match(`Uploading ${appName} version (.*)\.\.\.`)

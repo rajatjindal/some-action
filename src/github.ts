@@ -3,15 +3,13 @@ import { Octokit } from "@octokit/rest";
 export class GithubClient {
     owner: string
     repo: string
-    token: string
     _ghclient: Octokit
 
     constructor(owner: string, repo: string, token: string) {
         this.owner = owner
         this.repo = repo
-        this.token = token
 
-        this._ghclient = new Octokit({ auth: `personal-access-token123` });
+        this._ghclient = new Octokit({ auth: token });
     }
 
     async findOldestPRNumber(): Promise<number> {

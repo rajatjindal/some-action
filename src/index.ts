@@ -1,14 +1,7 @@
 import * as core from '@actions/core'
-import * as exec from '@actions/exec'
-import * as downloader from './downloader'
-import { initFermyonClient, getSpinConfig, setupSpin } from './fermyon'
-import * as sys from './system'
+import * as fermyon from './fermyon'
 import * as github from '@actions/github';
-import * as octokit from 'octokit'
-import * as octocore from '@octokit/core'
-import { RequestParameters } from "@octokit/types";
 import * as io from '@actions/io'
-import * as path from 'path'
 import { GithubClient } from './github'
 
 async function run(): Promise<void> {
@@ -18,7 +11,7 @@ async function run(): Promise<void> {
     }
 
     core.info("read spin.toml")
-    const spinConfig = getSpinConfig()
+    const spinConfig = fermyon.getSpinConfig()
     const realAppName = spinConfig.name
 
     const currentPRNumber = github.context.payload.pull_request?.number
@@ -26,20 +19,20 @@ async function run(): Promise<void> {
     core.info(`will be deploying new app with name ${previewAppName}`)
 
     core.info("creating Github client")
-    const ghclient = new GithubClient(github.context.repo.owner, github.context.repo.repo, "")
-
-    core.info("creating Fermyon client")
-    const fermyonClient = initFermyonClient()
+    const ghclient = new GithubClient(github.context.repo.owner, github.context.repo.repo, core.getInput("github_token"))
 
     core.info("setting up spin")
-    await setupSpin()
+    await fermyon.setupSpin()
 
     core.info("configuring token for spin auth")
     const inputTokenFile = core.getInput('fermyon_token_file');
-    const defaultTokenFile = `${process.env.GITHUB_WORKSPACE}/config.json`
-    const tokenFile = inputTokenFile && inputTokenFile !== '' ? inputTokenFile : defaultTokenFile
-    await io.mkdirP("/home/runner/.config/fermyon/")
-    await io.cp(tokenFile, "/home/runner/.config/fermyon/config.json")
+    const defaultInputTokenFile = `${process.env.GITHUB_WORKSPACE}/config.json`
+    const tokenFile = inputTokenFile && inputTokenFile !== '' ? inputTokenFile : defaultInputTokenFile
+    await io.mkdirP(fermyon.DEFAULT_TOKEN_DIR)
+    await io.cp(tokenFile, fermyon.DEFAULT_TOKEN_FILE)
+
+    core.info("creating Fermyon client")
+    const fermyonClient = fermyon.initClient()
 
     core.info("checking if have room to deploy this preview")
     const apps = await fermyonClient.getAllApps()
