@@ -1,7 +1,7 @@
 import * as core from '@actions/core'
 import * as exec from '@actions/exec'
 import * as downloader from './downloader'
-import { initFermyonClient, getSpinConfig } from './fermyon'
+import { initFermyonClient, getSpinConfig, extractMetadataFromLogs } from './fermyon'
 import * as sys from './system'
 import * as github from '@actions/github';
 import * as octokit from 'octokit'
@@ -12,7 +12,10 @@ import * as path from 'path'
 
 async function run(): Promise<void> {
   try {
-    core.info("is this?")
+    // core.info("is this?")
+    // const m = extractMetadataFromLogs("fermyon-developer", "")
+    // core.info(`metadata is ${JSON.stringify(m)}`)
+
     // core.info(`context ${JSON.stringify(github.context.payload)}`)
     if (!github.context.payload.pull_request) {
       throw `its not a pull request`

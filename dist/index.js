@@ -50915,10 +50915,11 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.getSpinConfig = exports.SpinConfig = exports.getToken = exports.TokenInfo = exports.FermyonClient = exports.Metadata = exports.Route = exports.App = exports.GetAppsResp = exports.initFermyonClient = exports.PROD_CLOUD_BASE = void 0;
+exports.extractMetadataFromLogs = exports.getSpinConfig = exports.SpinConfig = exports.getToken = exports.TokenInfo = exports.FermyonClient = exports.Metadata = exports.Route = exports.App = exports.GetAppsResp = exports.initFermyonClient = exports.PROD_CLOUD_BASE = void 0;
 const core = __importStar(__nccwpck_require__(2186));
 const httpm = __importStar(__nccwpck_require__(6255));
 const exec = __importStar(__nccwpck_require__(1514));
+const io = __importStar(__nccwpck_require__(7436));
 const fs = __importStar(__nccwpck_require__(5630));
 const toml = __importStar(__nccwpck_require__(4920));
 exports.PROD_CLOUD_BASE = "https://cloud.fermyon.com";
@@ -51004,35 +51005,22 @@ class FermyonClient {
     }
     deploy(appName) {
         return __awaiter(this, void 0, void 0, function* () {
-            const result = yield exec.getExecOutput("spin", ["deploy"]);
+            yield io.cp("spin.toml", `${appName}-spin.toml`);
+            fs.readFile(`${appName}-spin.toml`, 'utf8', function (err, data) {
+                if (err) {
+                    return console.log(err);
+                }
+                var result = data.replace(/fermyon-developer/g, appName);
+                fs.writeFile(`${appName}-spin.toml`, result, 'utf8', function (err) {
+                    if (err)
+                        return console.log(err);
+                });
+            });
+            const result = yield exec.getExecOutput("spin", ["deploy", "--file", `${appName}-spin.toml`]);
             if (result.exitCode != 0) {
                 throw `deploy failed with [status_code: ${result.exitCode}] [stdout: ${result.stdout}] [stderr: ${result.stderr}] `;
             }
-            let version = '';
-            const m = result.stdout.match(`Uploading ${appName} version (.*)\.\.\.`);
-            if (m && m.length > 1) {
-                version = m[1];
-            }
-            let routeStart = false;
-            const routeMatcher = `^\s+(.*): (https?://[^\s^\\(]+)(.*)`;
-            const lines = result.stdout.split("\n");
-            let routes = new Array();
-            let base = '';
-            for (let i = 0; i < lines.length; i++) {
-                if (!routeStart && lines[i].trim() != 'Available Routes:') {
-                    continue;
-                }
-                if (!routeStart) {
-                    routeStart = true;
-                    continue;
-                }
-                const matches = lines[i].match(routeMatcher);
-                if (matches && matches.length >= 2) {
-                    const route = new Route(matches[1], matches[2], matches[3].trim() === '(wildcard)');
-                    routes.push(route);
-                }
-            }
-            return new Metadata(appName, base, version, routes, result.stdout);
+            return (0, exports.extractMetadataFromLogs)(appName, result.stdout);
         });
     }
 }
@@ -51063,6 +51051,41 @@ const getSpinConfig = function () {
     return config;
 };
 exports.getSpinConfig = getSpinConfig;
+const extractMetadataFromLogs = function (appName, logs) {
+    let version = '';
+    const m = logs.match(`Uploading ${appName} version (.*)\.\.\.`);
+    if (m && m.length > 1) {
+        version = m[1];
+    }
+    let routeStart = false;
+    const routeMatcher = `^(.*): (https?:\/\/[^\s^(]+)(.*)`;
+    const lines = logs.split("\n");
+    let routes = new Array();
+    let base = '';
+    for (let i = 0; i < lines.length; i++) {
+        if (!routeStart && lines[i].trim() != 'Available Routes:') {
+            core.info("found available routes");
+            continue;
+        }
+        if (!routeStart) {
+            core.info("starting routes");
+            routeStart = true;
+            continue;
+        }
+        core.info(`line is ${lines[i]}`);
+        const matches = lines[i].trim().match(routeMatcher);
+        core.info(`matches is ${matches}`);
+        if (matches && matches.length >= 2) {
+            const route = new Route(matches[1], matches[2], matches[3].trim() === '(wildcard)');
+            routes.push(route);
+        }
+    }
+    if (routes.length > 0) {
+        base = routes[0].routeUrl;
+    }
+    return new Metadata(appName, base, version, routes, logs);
+};
+exports.extractMetadataFromLogs = extractMetadataFromLogs;
 
 
 /***/ }),
@@ -51112,7 +51135,9 @@ function run() {
     var _a;
     return __awaiter(this, void 0, void 0, function* () {
         try {
-            core.info("is this?");
+            // core.info("is this?")
+            // const m = extractMetadataFromLogs("fermyon-developer", "")
+            // core.info(`metadata is ${JSON.stringify(m)}`)
             // core.info(`context ${JSON.stringify(github.context.payload)}`)
             if (!github.context.payload.pull_request) {
                 throw `its not a pull request`;

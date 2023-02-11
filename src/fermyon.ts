@@ -105,40 +105,25 @@ export class FermyonClient {
     }
 
     async deploy(appName: string): Promise<Metadata> {
-        const result = await exec.getExecOutput("spin", ["deploy"])
+        await io.cp("spin.toml", `${appName}-spin.toml`)
+
+        fs.readFile(`${appName}-spin.toml`, 'utf8', function (err, data) {
+            if (err) {
+                return console.log(err);
+            }
+            var result = data.replace(/fermyon-developer/g, appName);
+
+            fs.writeFile(`${appName}-spin.toml`, result, 'utf8', function (err) {
+                if (err) return console.log(err);
+            });
+        });
+
+        const result = await exec.getExecOutput("spin", ["deploy", "--file", `${appName}-spin.toml`])
         if (result.exitCode != 0) {
             throw `deploy failed with [status_code: ${result.exitCode}] [stdout: ${result.stdout}] [stderr: ${result.stderr}] `
         }
 
-        let version = '';
-        const m = result.stdout.match(`Uploading ${appName} version (.*)\.\.\.`)
-        if (m && m.length > 1) {
-            version = m[1]
-        }
-
-        let routeStart = false;
-        const routeMatcher = `^\s+(.*): (https?://[^\s^\\(]+)(.*)`
-        const lines = result.stdout.split("\n")
-        let routes = new Array<Route>();
-        let base = '';
-        for (let i = 0; i < lines.length; i++) {
-            if (!routeStart && lines[i].trim() != 'Available Routes:') {
-                continue
-            }
-
-            if (!routeStart) {
-                routeStart = true
-                continue
-            }
-
-            const matches = lines[i].match(routeMatcher)
-            if (matches && matches.length >= 2) {
-                const route = new Route(matches[1], matches[2], matches[3].trim() === '(wildcard)')
-                routes.push(route)
-            }
-        }
-
-        return new Metadata(appName, base, version, routes, result.stdout)
+        return extractMetadataFromLogs(appName, result.stdout)
     }
 }
 
@@ -173,3 +158,45 @@ export const getSpinConfig = function (): SpinConfig {
     const config: SpinConfig = toml.parse(data);
     return config
 }
+
+export const extractMetadataFromLogs = function (appName: string, logs: string): Metadata {
+    let version = '';
+    const m = logs.match(`Uploading ${appName} version (.*)\.\.\.`)
+    if (m && m.length > 1) {
+        version = m[1]
+    }
+
+    let routeStart = false;
+    const routeMatcher = `^(.*): (https?:\/\/[^\s^(]+)(.*)`
+    const lines = logs.split("\n")
+    let routes = new Array<Route>();
+    let base = '';
+    for (let i = 0; i < lines.length; i++) {
+        if (!routeStart && lines[i].trim() != 'Available Routes:') {
+            core.info("found available routes")
+            continue
+        }
+
+        if (!routeStart) {
+            core.info("starting routes")
+            routeStart = true
+            continue
+        }
+
+        core.info(`line is ${lines[i]}`)
+
+        const matches = lines[i].trim().match(routeMatcher)
+        core.info(`matches is ${matches}`)
+        if (matches && matches.length >= 2) {
+            const route = new Route(matches[1], matches[2], matches[3].trim() === '(wildcard)')
+            routes.push(route)
+        }
+    }
+
+    if (routes.length > 0) {
+        base = routes[0].routeUrl
+    }
+
+    return new Metadata(appName, base, version, routes, logs)
+}
+
