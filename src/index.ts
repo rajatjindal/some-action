@@ -52,7 +52,6 @@ async function run(): Promise<void> {
 
     core.info(`:name_badge: deploying preview as ${previewAppName}`)
     const metadata = await fermyonClient.deployAs(realAppName, previewAppName)
-    core.info(`metadata is ${JSON.stringify(metadata)}`)
 
     const comment = `Your preview is available at ${metadata.base}`
     await ghclient.updateComment(currentPRNumber, comment)

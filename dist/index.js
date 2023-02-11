@@ -23816,7 +23816,6 @@ function run() {
             }
             core.info(`:name_badge: deploying preview as ${previewAppName}`);
             const metadata = yield fermyonClient.deployAs(realAppName, previewAppName);
-            core.info(`metadata is ${JSON.stringify(metadata)}`);
             const comment = `Your preview is available at ${metadata.base}`;
             yield ghclient.updateComment(currentPRNumber, comment);
             core.info(`:zap: preview deployment successful and available at ${metadata.base}`);
