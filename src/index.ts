@@ -7,6 +7,7 @@ import * as github from '@actions/github';
 import * as octokit from 'octokit'
 import * as octocore from '@octokit/core'
 import { RequestParameters } from "@octokit/types";
+import * as io from '@actions/io'
 
 async function run(): Promise<void> {
   try {
@@ -63,6 +64,7 @@ async function run(): Promise<void> {
     }
 
     // deploy new app
+    await io.cp("/github/workspace/developer-docs-preview.json", "/home/runner/.config/fermyon/config.json")
     await fermyonClient.deploy(`${spinConfig.name}-pr-${github.context.payload.pull_request?.number}`)
 
     // update comment
