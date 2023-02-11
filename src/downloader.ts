@@ -43,12 +43,12 @@ export class Downloader {
     this.validate()
     const downloadURL = this.url
 
-    core.info(`Downloading tool from ${downloadURL}`)
+    core.debug(`Downloading tool from ${downloadURL}`)
     let downloadPath: string | null = null
     let archivePath: string | null = null
     const randomDir: string = uuidv4()
     const tempDir = path.join(os.tmpdir(), 'tmp', 'runner', randomDir)
-    core.info(`Creating tempdir ${tempDir}`)
+    core.debug(`Creating tempdir ${tempDir}`)
     await io.mkdirP(tempDir)
     downloadPath = await tc.downloadTool(downloadURL)
 
@@ -92,12 +92,12 @@ export class Downloader {
     this.validate()
     const downloadURL = this.url
 
-    core.info(`Downloading tool from ${downloadURL}`)
+    core.debug(`Downloading tool from ${downloadURL}`)
     let downloadPath: string | null = null
     let archivePath: string | null = null
     const randomDir: string = uuidv4()
     const tempDir = path.join(os.tmpdir(), 'tmp', 'runner', randomDir)
-    core.info(`Creating tempdir ${tempDir}`)
+    core.debug(`Creating tempdir ${tempDir}`)
     await io.mkdirP(tempDir)
     downloadPath = await tc.downloadTool(downloadURL)
 
@@ -141,7 +141,7 @@ export class Downloader {
     await io.mkdirP(toolPath)
     const dest = path.join(toolPath, this.name)
     await fs.exists(downloadPath)
-    core.info(`copying ${downloadPath} to ${dest}`)
+    core.debug(`copying ${downloadPath} to ${dest}`)
 
     if (!fs.existsSync(dest)) {
       fs.moveSync(downloadPath, dest)
@@ -158,7 +158,7 @@ export class Downloader {
     const toolPath = binFolderPath()
     await io.mkdirP(toolPath)
     const dest = path.join(toolPath, this.name)
-    core.info(`copying to ${dest}`)
+    core.debug(`copying to ${dest}`)
 
     if (!fs.existsSync(dest)) {
       fs.moveSync(downloadPath, dest)

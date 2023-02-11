@@ -23307,12 +23307,12 @@ class Downloader {
         return __awaiter(this, void 0, void 0, function* () {
             this.validate();
             const downloadURL = this.url;
-            core.info(`Downloading tool from ${downloadURL}`);
+            core.debug(`Downloading tool from ${downloadURL}`);
             let downloadPath = null;
             let archivePath = null;
             const randomDir = (0, uuid_1.v4)();
             const tempDir = path.join(os.tmpdir(), 'tmp', 'runner', randomDir);
-            core.info(`Creating tempdir ${tempDir}`);
+            core.debug(`Creating tempdir ${tempDir}`);
             yield io.mkdirP(tempDir);
             downloadPath = yield tc.downloadTool(downloadURL);
             switch (getArchiveType(downloadURL)) {
@@ -23348,12 +23348,12 @@ class Downloader {
         return __awaiter(this, void 0, void 0, function* () {
             this.validate();
             const downloadURL = this.url;
-            core.info(`Downloading tool from ${downloadURL}`);
+            core.debug(`Downloading tool from ${downloadURL}`);
             let downloadPath = null;
             let archivePath = null;
             const randomDir = (0, uuid_1.v4)();
             const tempDir = path.join(os.tmpdir(), 'tmp', 'runner', randomDir);
-            core.info(`Creating tempdir ${tempDir}`);
+            core.debug(`Creating tempdir ${tempDir}`);
             yield io.mkdirP(tempDir);
             downloadPath = yield tc.downloadTool(downloadURL);
             switch (getArchiveType(downloadURL)) {
@@ -23391,7 +23391,7 @@ class Downloader {
             yield io.mkdirP(toolPath);
             const dest = path.join(toolPath, this.name);
             yield fs.exists(downloadPath);
-            core.info(`copying ${downloadPath} to ${dest}`);
+            core.debug(`copying ${downloadPath} to ${dest}`);
             if (!fs.existsSync(dest)) {
                 fs.moveSync(downloadPath, dest);
             }
@@ -23406,7 +23406,7 @@ class Downloader {
             const toolPath = binFolderPath();
             yield io.mkdirP(toolPath);
             const dest = path.join(toolPath, this.name);
-            core.info(`copying to ${dest}`);
+            core.debug(`copying to ${dest}`);
             if (!fs.existsSync(dest)) {
                 fs.moveSync(downloadPath, dest);
             }
@@ -23784,23 +23784,22 @@ function run() {
             if (!github.context.payload.pull_request) {
                 throw `this action currently support deploying apps on PR only`;
             }
-            core.info("reading spin.toml");
+            core.info(":eyes: reading spin.toml");
             const spinConfig = fermyon.getSpinConfig();
             const realAppName = spinConfig.name;
             const currentPRNumber = (_a = github.context.payload.pull_request) === null || _a === void 0 ? void 0 : _a.number;
             const previewAppName = `${spinConfig.name}-pr-${currentPRNumber}`;
-            core.info(`will be deploying preview with name ${previewAppName}`);
-            core.info("creating Github client");
+            core.info(":octocat: creating Github client");
             const ghclient = new github_1.GithubClient(github.context.repo.owner, github.context.repo.repo, core.getInput("github_token"));
-            core.info("setting up spin");
+            core.info(":anchor: setting up spin");
             yield fermyon.setupSpin();
-            core.info("configuring token for spin auth");
-            const inputTokenFile = core.getInput('fermyon_token_file');
+            core.info(":ticket: configuring token for spin auth");
+            const inputTokenFile = `${process.env.GITHUB_WORKSPACE}/${core.getInput('fermyon_token_file_name')}`;
             const defaultInputTokenFile = `${process.env.GITHUB_WORKSPACE}/config.json`;
             const tokenFile = inputTokenFile && inputTokenFile !== '' ? inputTokenFile : defaultInputTokenFile;
             yield io.mkdirP(fermyon.DEFAULT_TOKEN_DIR);
             yield io.cp(tokenFile, fermyon.DEFAULT_TOKEN_FILE);
-            core.info("creating Fermyon client");
+            core.info(":cloud: creating Fermyon client");
             const fermyonClient = fermyon.initClient();
             core.info("checking if have room to deploy this preview");
             const apps = yield fermyonClient.getAllApps();
@@ -23809,18 +23808,18 @@ function run() {
                 if (core.getInput("overwrite_old_previews") !== 'true') {
                     throw `max apps allowed limit exceeded. max_allowed: 5, current_apps_count: ${apps.length}. Use option 'overwrite_old_previews=true' to overwrite old previews`;
                 }
-                core.info("apps limit reached. finding oldest pr to overwrite");
+                core.info(":closed_lock_with_key: apps limit reached. finding oldest pr to overwrite");
                 const oldestDeployedPRNumber = yield ghclient.findOldestPRNumber();
                 const oldestDeployedPRPreviewName = `${spinConfig.name}-pr-${oldestDeployedPRNumber}`;
-                core.info(`deleting app by name ${oldestDeployedPRPreviewName}`);
+                core.info(`:scissors: deleting app by name ${oldestDeployedPRPreviewName}`);
                 yield fermyonClient.deleteAppByName(oldestDeployedPRPreviewName);
             }
-            core.info(`deploying preview as ${previewAppName}`);
+            core.info(`:name_badge: deploying preview as ${previewAppName}`);
             const metadata = yield fermyonClient.deployAs(realAppName, previewAppName);
             core.info(`metadata is ${JSON.stringify(metadata)}`);
             const comment = `Your preview is available at ${metadata.base}`;
             yield ghclient.updateComment(currentPRNumber, comment);
-            core.info(`preview deployment successful and available at ${metadata.base}`);
+            core.info(`:zap: preview deployment successful and available at ${metadata.base}`);
         }
         catch (error) {
             if (error instanceof Error)
