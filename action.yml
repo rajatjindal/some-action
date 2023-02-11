@@ -1,0 +1,11 @@
+name: 'Rajat Jindal'
+description: 'downloads and add fermyon/spin to your PATH'
+author: 'Rajat Jindal'
+inputs:
+  version:
+    required: false
+    description: 'version of spin to setup'
+    default: 'v0.8.0'
+runs:
+  using: 'node16'
+  main: 'dist/index.js'
